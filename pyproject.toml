@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "queryscope"
+version = "0.1.0"
+description = "Zero-API-cost natural-language-to-SQL with a typed compiler, measured evaluation, and a consulting business case"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+semantic = ["sentence-transformers>=2.2"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+queryscope = "queryscope.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
