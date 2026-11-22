@@ -69,7 +69,7 @@ PAGE = """<!doctype html>
     <div class="stat"><b>$0</b><small>API cost per query</small></div>
     <div class="stat"><b>8</b><small>Intent families</small></div>
     <div class="stat"><b>SELECT</b><small>Only — writes impossible</small></div>
-    <div class="stat"><b>60</b><small>Measured benchmark cases</small></div>
+    <div class="stat"><b>64</b><small>Measured benchmark cases</small></div>
   </div>
   <div class="card">
     <form id="f"><input id="q" autocomplete="off" placeholder="e.g. top 5 products by revenue" autofocus>
