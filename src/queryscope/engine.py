@@ -67,6 +67,18 @@ class Engine:
 
         matches = self.retriever.retrieve(question, k=3)
         top = matches[0]
+
+        if top.family is IntentFamily.OUT_OF_SCOPE:
+            canonicals = self.lexicon.canonical_tokens(re.sub(r"[^a-z0-9_ ]", " ", question.lower()).split())
+            has_business_metric = any(c.startswith(("measure:", "agg:")) for c in canonicals)
+            business_opener = re.match(
+                r"(what|total|how|show|give|list|top|compare|count|sum|average|revenue|sales)",
+                question.lower(),
+            )
+            if has_business_metric and business_opener:
+                matches = tuple(m for m in matches if m.family is not IntentFamily.OUT_OF_SCOPE)
+                top = matches[0]
+
         effective_now = now or self.now
 
         def finish(answer: Answer) -> Answer:

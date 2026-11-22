@@ -23,6 +23,10 @@ EXAMPLES: dict[IntentFamily, tuple[str, ...]] = {
     IntentFamily.AGGREGATE: (
         "total revenue by country",
         "how many orders are there",
+        "how many customers are there",
+        "how many products are there",
+        "revenue by segment",
+        "revenue by category",
         "average salary of employees",
         "sum of quantity by product",
         "how many customers per segment",

@@ -31,10 +31,13 @@ from .retrieval import IntentMatch
 
 AMBIGUITY_EPS = 0.04
 
-COUNTRIES = ("USA", "UK", "Germany", "France", "India", "Canada", "Japan", "Brazil")
-CATEGORIES = ("Beverages", "Condiments", "Dairy", "Grains", "Produce", "Meat", "Snacks", "Electronics")
+COUNTRIES = ("USA", "UK", "Germany", "France", "India", "Canada", "Japan", "Brazil", "United States")
+CATEGORIES = (
+    "Beverages", "Condiments", "Dairy", "Grains", "Produce", "Meat", "Snacks", "Electronics",
+    "Furniture", "Office Supplies", "Technology",
+)
 STATUSES = ("Shipped", "Delivered", "Processing", "Cancelled")
-SEGMENTS = ("Enterprise", "Mid-Market", "SMB")
+SEGMENTS = ("Enterprise", "Mid-Market", "SMB", "Consumer", "Corporate", "Home Office")
 
 PREFERRED_DIMENSION = {
     "customers": "company_name",
@@ -166,8 +169,14 @@ def _measure(
             return DerivedSource(token.split(":", 1)[1])
     if agg is Agg.COUNT:
         count_entity = re.search(r"\b(?:number|count)\s+of\s+(\w+)", question.lower())
-        tables = ([count_entity.group(1)] if count_entity else list(mentioned))
-        for table in tables:
+        tables = list(mentioned)
+        if count_entity:
+            candidate = count_entity.group(1)
+            if candidate.endswith("s") and candidate[:-1] in ENTITY_TABLES:
+                candidate = candidate[:-1]
+            if candidate in ENTITY_TABLES or candidate == "orders":
+                tables.insert(0, candidate)
+        for table in dict.fromkeys(tables):
             if table.endswith("s") and table[:-1] in ENTITY_TABLES:
                 table = table[:-1]
             if table in ENTITY_TABLES or table == "orders":
@@ -290,8 +299,9 @@ def build_plan(
     """
     if alternatives:
         tied = [m for m in alternatives if m.score >= alternatives[0].score - AMBIGUITY_EPS]
+        exact_match = any(m.score >= 0.99 for m in tied)
         distinct = {m.family for m in tied}
-        if len(distinct) > 1:
+        if not exact_match and len(distinct) > 1:
             return PlanResult(
                 None,
                 interpretations=tuple(sorted(f.value for f in distinct)),

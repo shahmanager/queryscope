@@ -22,3 +22,7 @@ jobs:
         run: python scripts/run_eval.py
       - name: Check CLI
         run: python -m queryscope ask "top 5 products by revenue" --json
+      - name: Real dataset verification
+        run: |
+          python scripts/load_real_dataset.py
+          python scripts/test_real.py
