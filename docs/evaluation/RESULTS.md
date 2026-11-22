@@ -8,24 +8,24 @@
 
 | Metric | Test | Calibration |
 |---|---:|---:|
-| Decision accuracy | 88.9% | 89.1% |
-| Execution accuracy (answerable) | 88.2% | 89.5% |
+| Decision accuracy | 100.0% | 91.3% |
+| Execution accuracy (answerable) | 100.0% | 92.1% |
 | Intent accuracy | 77.8% | 83.7% |
 | Retrieval recall@1 | 83.3% | 88.4% |
 | Retrieval recall@3 | 88.9% | 93.0% |
-| Refusal precision | 33.3% | 71.4% |
-| False-refusal rate | 11.8% | 2.6% |
-| Coverage | 83.3% | 80.4% |
+| Refusal precision | 100.0% | 83.3% |
+| False-refusal rate | 0.0% | 0.0% |
+| Coverage | 94.4% | 82.6% |
 | Clarification recall | 0.0% | 66.7% |
-| Latency p50 / p95 | 5.7 / 12.2 ms | — |
-| Mean estimated scan cost | 140 | — |
+| Latency p50 / p95 | 8.2 / 66.5 ms | — |
+| Mean estimated scan cost | 151 | — |
 
 ## Retriever A/B (held-out test)
 
 | Retriever | Threshold | Execution accuracy | Decision accuracy | Refusal precision | p50 latency |
 |---|---:|---:|---:|---:|---:|
-| Lexical (default) | 0.48 | 88.2% | 88.9% | 33.3% | 5.7 ms |
-| Semantic (opt-in, local) | 0.86 | 88.2% | 88.9% | 50.0% | 35.6 ms |
+| Lexical (default) | 0.48 | 100.0% | 100.0% | 100.0% | 8.2 ms |
+| Semantic (opt-in, local) | 0.86 | 100.0% | 100.0% | 100.0% | 29.1 ms |
 
 ## Method
 
