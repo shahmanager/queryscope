@@ -1,0 +1,72 @@
+{
+  "threshold": 0.5,
+  "semantic": {
+    "threshold": 0.86,
+    "calibration": {
+      "cases": 46,
+      "decision_accuracy": 0.8478,
+      "execution_accuracy": 0.8158,
+      "intent_accuracy": 0.8837,
+      "retrieval_recall_at_1": 0.9302,
+      "retrieval_recall_at_3": 0.9535,
+      "refusal_precision": 1.0,
+      "false_refusal_rate": 0.0,
+      "coverage": 0.7174,
+      "clarification_recall": 1.0,
+      "latency_p50_ms": 14.74,
+      "latency_p95_ms": 21.32,
+      "mean_estimated_scan_cost": 115.4
+    },
+    "test": {
+      "cases": 18,
+      "decision_accuracy": 0.8889,
+      "execution_accuracy": 0.8824,
+      "intent_accuracy": 0.7222,
+      "retrieval_recall_at_1": 0.7778,
+      "retrieval_recall_at_3": 0.8889,
+      "refusal_precision": 0.5,
+      "false_refusal_rate": 0.0588,
+      "coverage": 0.8333,
+      "clarification_recall": 0.0,
+      "latency_p50_ms": 13.8,
+      "latency_p95_ms": 25.87,
+      "mean_estimated_scan_cost": 140.0
+    }
+  },
+  "total_cases": 64,
+  "calibration_cases": 46,
+  "test_cases": 18,
+  "calibration": {
+    "cases": 46,
+    "decision_accuracy": 0.9348,
+    "execution_accuracy": 0.9474,
+    "intent_accuracy": 0.8605,
+    "retrieval_recall_at_1": 0.907,
+    "retrieval_recall_at_3": 0.9302,
+    "refusal_precision": 0.8333,
+    "false_refusal_rate": 0.0,
+    "coverage": 0.8261,
+    "clarification_recall": 0.6667,
+    "latency_p50_ms": 1.78,
+    "latency_p95_ms": 3.12,
+    "mean_estimated_scan_cost": 137.4
+  },
+  "test": {
+    "cases": 18,
+    "decision_accuracy": 0.9444,
+    "execution_accuracy": 0.9412,
+    "intent_accuracy": 0.7778,
+    "retrieval_recall_at_1": 0.8333,
+    "retrieval_recall_at_3": 0.8333,
+    "refusal_precision": 1.0,
+    "false_refusal_rate": 0.0,
+    "coverage": 0.8889,
+    "clarification_recall": 0.0,
+    "latency_p50_ms": 1.62,
+    "latency_p95_ms": 4.36,
+    "mean_estimated_scan_cost": 145.6
+  },
+  "tuning_score": 0.9348,
+  "eval_now": "2026-06-30",
+  "retriever": "lexical"
+}

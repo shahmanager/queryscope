@@ -65,6 +65,7 @@ class Metric:
     agg: Agg
     source: ColumnRef | DerivedSource | None = None  # None -> COUNT(*)
     alias: str = "metric_1"
+    distinct: bool = False
 
 
 @dataclass(frozen=True)

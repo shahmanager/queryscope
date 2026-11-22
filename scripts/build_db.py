@@ -36,7 +36,11 @@ def build(db_path: Path = DB_PATH) -> Path:
     ]
     categories = [(i, name) for i, name in enumerate(CATEGORIES, 1)]
     suppliers = [(i, f"{rng.choice(LAST)} Supply Co {i}", rng.choice(COUNTRIES)) for i in range(1, 11)]
-    stores = [(i, f"Store {rng.choice(CITIES)} {i}", rng.choice(CITIES), rng.choice(COUNTRIES)) for i in range(1, 6)]
+    store_countries = ["USA", "UK", "Germany", "Canada", "France"]
+    stores = [
+        (i, f"Store {store_countries[index]} {i}", CITIES[index], store_countries[index])
+        for index, i in enumerate(range(1, 6))
+    ]
     employees = [
         (i, f"{rng.choice(FIRST)} {rng.choice(LAST)}", rng.choice(COUNTRIES),
          (date(2018, 1, 1) + timedelta(days=rng.randint(0, 2500))).isoformat(),

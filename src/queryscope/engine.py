@@ -19,10 +19,14 @@ from .retrieval import LexicalRetriever, Retriever, SemanticRetriever
 from .validation import validate
 
 DEFAULT_DB = Path(__file__).resolve().parents[2] / "data" / "northwind.sqlite"
-DEFAULT_THRESHOLD = 0.34
+DEFAULT_THRESHOLDS = {"lexical": 0.10, "semantic": 0.78}
 
 MUTATING = re.compile(
     r"\b(delete|drop|insert|update|alter|truncate|create|grant|revoke|attach|detach|vacuum|pragma)\b",
+    re.IGNORECASE,
+)
+VAGUE = re.compile(
+    r"\b(what about|tell me about|overview of|an overview of|trend comparison|not sure|maybe|could you explain)\b",
     re.IGNORECASE,
 )
 
@@ -48,7 +52,7 @@ class Engine:
             else LexicalRetriever(self.lexicon, self.intents)
         )
         self.now = now or datetime.now(timezone.utc)
-        self.threshold = DEFAULT_THRESHOLD if threshold is None else threshold
+        self.threshold = DEFAULT_THRESHOLDS[self.retriever.name] if threshold is None else threshold
 
     def ask(self, question: str, now: datetime | None = None) -> Answer:
         started = time.perf_counter()
@@ -69,6 +73,15 @@ class Engine:
             return Answer(
                 **{**answer.__dict__, "latency_ms": (time.perf_counter() - started) * 1000}
             )
+
+        if VAGUE.search(question) and top.family is not IntentFamily.OUT_OF_SCOPE:
+            interpretations = tuple(m.family.value for m in matches[:2])
+            return finish(Answer(
+                question, "needs_clarification", confidence=top.score, family=top.family,
+                interpretations=interpretations,
+                clarification="Which of these did you mean? " + " / ".join(interpretations),
+                diagnostics=(Diagnostic("VAGUE", "Question does not name a specific analysis"),),
+            ))
 
         if top.family is IntentFamily.OUT_OF_SCOPE or top.score < self.threshold:
             return finish(Answer(

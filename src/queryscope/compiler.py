@@ -105,7 +105,8 @@ def compile_plan(plan: QueryPlan, catalog: SchemaCatalog) -> CompiledSQL:
 
     for metric in plan.metrics:
         expr = source_sql(metric.source)
-        select.append(f"{metric.agg.value}({expr}) AS {quote(metric.alias)}")
+        distinct = "DISTINCT " if metric.distinct else ""
+        select.append(f"{metric.agg.value}({distinct}{expr}) AS {quote(metric.alias)}")
 
     if not select:
         raise ValueError("Cannot compile a plan with no selectable expressions")
@@ -151,8 +152,9 @@ def compile_plan(plan: QueryPlan, catalog: SchemaCatalog) -> CompiledSQL:
     if where:
         from_clause += " WHERE " + " AND ".join(where)
 
-    sql = "SELECT " + ", ".join(select) + " " + from_clause
-    if group_by:
+    prefix = "SELECT DISTINCT " if not plan.metrics and plan.dimensions else "SELECT "
+    sql = prefix + ", ".join(select) + " " + from_clause
+    if group_by and plan.metrics:
         sql += " GROUP BY " + ", ".join(group_by)
 
     if plan.time_grain and plan.dimensions:

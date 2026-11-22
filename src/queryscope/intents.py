@@ -28,6 +28,9 @@ EXAMPLES: dict[IntentFamily, tuple[str, ...]] = {
         "how many customers per segment",
         "total freight by store",
         "average unit price by category",
+        "total revenue by category",
+        "average salary by country",
+        "sum of freight by country",
     ),
     IntentFamily.TREND: (
         "revenue over time by month",
@@ -58,6 +61,8 @@ EXAMPLES: dict[IntentFamily, tuple[str, ...]] = {
         "how many products by category",
         "count of employees per country",
         "distribution of revenue by category",
+        "count of customers by country",
+        "distribution of products by category",
     ),
     IntentFamily.JOIN_LOOKUP: (
         "which customers ordered product 7",

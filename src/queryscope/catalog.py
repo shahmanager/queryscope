@@ -81,6 +81,12 @@ class SchemaCatalog:
     def foreign_keys(self) -> tuple[tuple[str, str, str, str], ...]:
         return self._fks
 
+    def primary_key(self, table: str) -> str | None:
+        for col in self._columns.get(table, ()):
+            if col.is_pk:
+                return col.name
+        return None
+
     def column(self, key: str) -> ColumnInfo:
         table, _, name = key.partition(".")
         for col in self._columns.get(table, ()):
