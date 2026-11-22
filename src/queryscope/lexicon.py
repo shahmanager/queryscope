@@ -1,7 +1,8 @@
 """Business vocabulary. Maps ordinary words to canonical, typed tokens.
 
-This is the only place where free text is interpreted. Its output is a
-closed vocabulary, so nothing downstream ever sees raw user text.
+Schema-independent grammar stays here. Every reference to a table or column
+comes from SchemaProfile, which is discovered from the connected database at
+runtime. No table or column name is hardcoded.
 """
 
 from __future__ import annotations
@@ -10,25 +11,12 @@ import re
 from typing import Iterable
 
 from .catalog import SchemaCatalog
+from .schema_profile import SchemaProfile
 
 _TOKEN_RE = re.compile(r"[a-z0-9_]+")
 
-BASE_SYNONYMS: dict[str, tuple[str, ...]] = {
-    # measures
-    "revenue": ("measure:line_revenue",),
-    "sales": ("measure:line_revenue",),
-    "turnover": ("measure:line_revenue",),
-    "income": ("measure:line_revenue",),
-    "quantity": ("measure:line_quantity", "column:order_items.quantity"),
-    "quantities": ("measure:line_quantity",),
-    "units": ("measure:line_quantity",),
-    "freight": ("column:orders.freight",),
-    "shipping": ("column:orders.freight",),
-    "salary": ("column:employees.salary",),
-    "pay": ("column:employees.salary",),
-    "price": ("column:products.unit_price",),
-    "prices": ("column:products.unit_price",),
-    # aggregations
+# Grammar only — these tokens mean the same thing for every schema.
+GRAMMAR_SYNONYMS: dict[str, tuple[str, ...]] = {
     "total": ("agg:sum",),
     "sum": ("agg:sum",),
     "summed": ("agg:sum",),
@@ -44,47 +32,6 @@ BASE_SYNONYMS: dict[str, tuple[str, ...]] = {
     "maximum": ("agg:max", "rank:desc"),
     "lowest": ("agg:min", "rank:asc"),
     "minimum": ("agg:min", "rank:asc"),
-    # entities
-    "customers": ("table:customers",),
-    "customer": ("table:customers",),
-    "client": ("table:customers",),
-    "account": ("table:customers",),
-    "store": ("table:stores",),
-    "branch": ("table:stores",),
-    "category": ("column:categories.category_name", "table:categories"),
-    "supplier": ("table:suppliers",),
-    "vendor": ("table:suppliers",),
-    "employee": ("table:employees",),
-    "salesperson": ("table:employees",),
-    "rep": ("table:employees",),
-    "clients": ("table:customers",),
-    "accounts": ("table:customers",),
-    "orders": ("table:orders",),
-    "order": ("table:orders",),
-    "purchases": ("table:orders",),
-    "products": ("table:products",),
-    "product": ("table:products",),
-    "items": ("table:products",),
-    "skus": ("table:products",),
-    "employees": ("table:employees",),
-    "reps": ("table:employees",),
-    "salespeople": ("table:employees",),
-    "stores": ("table:stores",),
-    "branches": ("table:stores",),
-    "categories": ("table:categories",),
-    "suppliers": ("table:suppliers",),
-    "vendors": ("table:suppliers",),
-    "country": ("column:customers.country",),
-    "countries": ("column:customers.country",),
-    "region": ("column:customers.country",),
-    "market": ("column:customers.country",),
-    "city": ("column:customers.city",),
-    "segment": ("column:customers.segment",),
-    "status": ("column:orders.status",),
-    "discontinued": ("column:products.discontinued",),
-    "stock": ("column:products.units_in_stock",),
-    "inventory": ("column:products.units_in_stock",),
-    # ranking / shape
     "top": ("rank:desc", "shape:top_n"),
     "best": ("rank:desc", "shape:top_n"),
     "most": ("rank:desc", "shape:top_n"),
@@ -105,6 +52,13 @@ BASE_SYNONYMS: dict[str, tuple[str, ...]] = {
     "annually": ("grain:year", "shape:trend"),
     "distribution": ("shape:distribution",),
     "breakdown": ("shape:distribution",),
+    "revenue": ("measure:line_revenue",),
+    "sales": ("measure:line_revenue",),
+    "turnover": ("measure:line_revenue",),
+    "income": ("measure:line_revenue",),
+    "quantity": ("measure:line_quantity",),
+    "quantities": ("measure:line_quantity",),
+    "units": ("measure:line_quantity",),
 }
 
 PHRASES: dict[str, tuple[str, ...]] = {
@@ -129,25 +83,28 @@ def tokenize(text: str) -> tuple[str, ...]:
 
 
 class Lexicon:
-    def __init__(self, catalog: SchemaCatalog | None = None) -> None:
-        self._synonyms = {key: tuple(value) for key, value in BASE_SYNONYMS.items()}
+    def __init__(
+        self,
+        catalog: SchemaCatalog | None = None,
+        profile: SchemaProfile | None = None,
+    ) -> None:
+        self.profile = profile or (SchemaProfile.discover(catalog) if catalog else None)
+        self._synonyms = {key: tuple(value) for key, value in GRAMMAR_SYNONYMS.items()}
         self.phrases = dict(PHRASES)
-        if catalog is not None:
-            counts: dict[str, int] = {}
+        if self.profile:
+            for word, canonicals in self.profile.column_aliases.items():
+                self._merge(word, canonicals)
+            for word, canonicals in self.profile.table_aliases.items():
+                self._merge(word, canonicals)
+            if self.profile.time_column:
+                self._merge("date", (f"column:{self.profile.time_column.key}",))
+        if catalog is not None and self.profile is None:
             for table in catalog.tables:
-                for col in catalog.columns_for(table):
-                    counts[col.name] = counts.get(col.name, 0) + 1
-            for table in catalog.tables:
-                self._synonyms[table] = tuple(
-                    set(self._synonyms.get(table, ()) + (f"table:{table}",))
-                )
-                for col in catalog.columns_for(table):
-                    if counts[col.name] > 1:
-                        continue  # ambiguous bare name; base synonyms decide scope
-                    self._synonyms.setdefault(col.name, ())
-                    self._synonyms[col.name] = tuple(
-                        set(self._synonyms[col.name] + (f"column:{col.key}",))
-                    )
+                self._merge(table, (f"table:{table}",))
+
+    def _merge(self, word: str, canonicals: Iterable[str]) -> None:
+        existing = set(self._synonyms.get(word, ()))
+        self._synonyms[word] = tuple(sorted(existing | set(canonicals)))
 
     def canonicals(self, token: str) -> tuple[str, ...]:
         return self._synonyms.get(token.lower(), ())

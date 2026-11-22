@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from .catalog import SchemaCatalog
 from .models import Agg, ColumnRef, DerivedSource, Diagnostic, QueryPlan
+from .schema_profile import SchemaProfile
 
 NUMERIC = ("INT", "REAL")
 
 
-def validate(plan: QueryPlan, catalog: SchemaCatalog) -> tuple[Diagnostic, ...]:
+def validate(plan: QueryPlan, catalog: SchemaCatalog, profile: SchemaProfile | None = None) -> tuple[Diagnostic, ...]:
+    profile = profile or SchemaProfile.discover(catalog)
     diagnostics: list[Diagnostic] = []
 
     if not plan.metrics and not plan.dimensions:
@@ -23,9 +25,10 @@ def validate(plan: QueryPlan, catalog: SchemaCatalog) -> tuple[Diagnostic, ...]:
                 diagnostics.append(Diagnostic("BAD_COUNT", "COUNT(*) is the only source-less metric"))
             continue
         if isinstance(source, DerivedSource):
-            if not catalog.has_column("order_items.quantity"):
+            measure_tables = profile.revenue_tables if source is DerivedSource.LINE_REVENUE else profile.quantity_tables
+            if not measure_tables:
                 diagnostics.append(Diagnostic("MISSING_MEASURE", f"Unknown measure {source.value}"))
-            tables.add("order_items")
+            tables.update(measure_tables)
             continue
         if not catalog.has_column(source.key):
             diagnostics.append(Diagnostic("UNKNOWN_COLUMN", f"Unknown column {source.key}"))

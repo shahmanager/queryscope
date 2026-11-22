@@ -7,7 +7,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab?style=flat-square)
 ![Dependencies](https://img.shields.io/badge/core%20dependencies-zero-brightgreen?style=flat-square)
 ![API cost](https://img.shields.io/badge/API%20cost-%240.00-brightgreen?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-32%20passing-success?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-34%20passing-success?style=flat-square)
 ![Evaluation](https://img.shields.io/badge/execution%20accuracy-100%25%20%2818%20cases%29-success?style=flat-square)
 ![Real data](https://img.shields.io/badge/real%20dataset-13%2F13-success?style=flat-square)
 
@@ -140,7 +140,7 @@ This is what keeps the system out of the "thin wrapper around string matching" t
 | Lexical scoring **by default** | Embeddings by default | Zero downloads, 1.6 ms vs 21.2 ms, and *higher* accuracy on this benchmark (100% vs 88.2%) | Brittle to unseen synonyms |
 | Semantic scorer opt-in and removable | Single hard-wired scorer | A/B measurable in one flag; swap without touching the compiler | Optional ~90 MB local model |
 | Read-only `mode=ro` + bound params | Sanitize strings after generation | Impossible-to-write-by-construction beats regex blacklists | No write features at all |
-| Fixed demo schema | Arbitrary user schemas | Depth over breadth; join graph and measures can be modelled properly | Not a generic product |
+| Runtime schema profile | Hardcoded Northwind names | Works on any SQLite file; the demo schema is just a default | Concept-name matching can be ambiguous, so profile-based disambiguation is heuristic |
 | Confidence tuned on calibration split, scored on held-out test | Tune and report on the same file | Prevents threshold leakage; numbers are defensible | Fewer test cases |
 | Injectable clock (`EVAL_NOW`) | Real system time | Gold SQL for relative dates never drifts | Caller must pass `now` in tests |
 | CLI + stdlib `http.server` demo | Flask / Streamlit | Zero dependency surface; runs anywhere Python runs | Less elaborate UI |
@@ -173,6 +173,24 @@ This is what keeps the system out of the "thin wrapper around string matching" t
 | Semantic (opt-in, local) | 88.2% | 88.9% | 50% | 21.2 ms |
 
 The simpler scorer wins on this benchmark. That is a finding, not an embarrassment: the semantic retriever's cosine scale makes the confidence threshold harder to calibrate, and it adds latency without improving accuracy at this domain size. It stays in the repo as a swappable reference implementation — the point is that the architecture lets you measure the choice instead of asserting it.
+
+### Works with any schema — not just the demo
+
+The catalog has always been introspected, but the original semantic layer still knew
+`customers.country`, `order_items.quantity` and eight other hardcoded names. That has been
+removed. `SchemaProfile.discover()` now derives at runtime:
+
+- fact tables (from FK degree × row count),
+- the date column, each table's human-readable label column,
+- filterable categorical columns and their **observed values**,
+- numeric measures, and a generic `revenue` expression built from whatever
+  quantity/price/amount/charge columns the schema actually has.
+
+The proof is [`tests/test_universal_schema.py`](tests/test_universal_schema.py): a hospital
+schema (`patients`, `admissions`, `diagnoses`, `treatments`, `providers`) with no column name
+in common with the demo warehouse. The engine correctly answers *"how many patients are
+there"*, *"total revenue"*, *"revenue by department"* and *"show patients in Canada"* against
+it. Point `Engine(db_path=...)` at your own SQLite file and it adapts.
 
 ### Tested against a real dataset
 
@@ -251,6 +269,7 @@ queryscope/
 ├── src/queryscope/
 │   ├── models.py                   # typed AST and answer vocabulary
 │   ├── catalog.py                  # schema introspection + FK graph
+│   ├── schema_profile.py           # runtime discovery of measures, labels, filters
 │   ├── lexicon.py                  # business term -> canonical token
 │   ├── intents.py                  # eight composable intent families
 │   ├── retrieval.py                # lexical + optional semantic scorers
@@ -265,7 +284,7 @@ queryscope/
 ├── benchmarks/questions.jsonl      # 64 labelled questions + gold SQL
 ├── business/roi.py                 # configurable adoption business case
 ├── scripts/                        # build_db.py, run_eval.py, load_real_dataset.py, test_real.py
-├── tests/                          # 32 tests
+├── tests/                          # 34 tests, including a novel hospital schema
 └── .github/workflows/ci.yml
 ```
 
@@ -273,8 +292,9 @@ queryscope/
 
 ## Limitations — stated plainly
 
-- One fixed schema and eight intent families. This is **not** a generic text-to-SQL product.
-- Vocabulary coverage depends on a curated synonym table; unseen phrasing can be refused.
+- Any SQLite schema is introspected at runtime, but accuracy outside the tested domains depends on how closely column names match common business concepts. The hospital test proves the mechanism, not universal accuracy.
+- Eight intent families cover a bounded set of analytical shapes; this is not a generic text-to-SQL product.
+- Vocabulary coverage depends on a curated grammar and business-concept patterns; unseen phrasing can be refused.
 - Join order is a breadth-first walk of the FK graph, not a cost-based optimizer.
 - "Estimated scan cost" is an `EXPLAIN QUERY PLAN` heuristic (100/SCAN, 10/SEARCH, 50/TEMP), not a timing.
 - The held-out test split is 18 questions and its phrasings are close to the curated catalog; the 100% result should not be read as open-domain accuracy. The unseen-phrasing probe (5/6) is the better signal.
@@ -299,6 +319,8 @@ I would rather state these in the README than let an interviewer find them.
 | Delivery | One-command setup, tests, CI, runnable CLI and demo |
 
 **Interview question this project is built to answer:** *"When an LLM would be the obvious choice, can you design a cheaper, safer system that still delivers most of the value — and prove it with numbers?"*
+
+**Second question this project now answers:** *"Why was the first version schema-specific?"* — because curated disambiguation bought accuracy. The fix was not to abandon that accuracy blindly but to move every schema-specific decision into a discovered profile, then prove the mechanism on a schema the system had never seen. Trade-offs are documented, not hidden.
 
 ---
 

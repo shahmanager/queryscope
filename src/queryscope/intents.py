@@ -21,6 +21,9 @@ EXAMPLES: dict[IntentFamily, tuple[str, ...]] = {
         "show orders with status Shipped",
     ),
     IntentFamily.AGGREGATE: (
+        "total revenue",
+        "total revenue in USA",
+        "how many employees are there",
         "total revenue by country",
         "how many orders are there",
         "how many customers are there",

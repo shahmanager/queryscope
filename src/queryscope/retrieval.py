@@ -10,6 +10,7 @@ and a single decision policy work across both.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -46,8 +47,19 @@ class LexicalRetriever:
         self.lexicon = lexicon
         self.catalog = catalog
         self._example_tokens = {
-            (family, example): frozenset(lexicon.canonical_tokens(tokenize(example)))
+            (family, example): frozenset(
+                lexicon.canonical_tokens(tokenize(example)) + lexicon.phrase_tokens(example)
+            )
             for family, example in catalog.pairs()
+        }
+        document_frequency: dict[str, int] = {}
+        for tokens in self._example_tokens.values():
+            for token in tokens:
+                document_frequency[token] = document_frequency.get(token, 0) + 1
+        total = len(self._example_tokens)
+        self._idf = {
+            token: math.log((total + 1) / (count + 1)) + 1.0
+            for token, count in document_frequency.items()
         }
 
     def _score(self, question: str, example: str) -> float:
@@ -55,12 +67,12 @@ class LexicalRetriever:
             self.lexicon.canonical_tokens(tokenize(question))
             + self.lexicon.phrase_tokens(question)
         )
-        e_tokens = self._example_tokens[(self._family_for(example), example)] | frozenset(
-            self.lexicon.phrase_tokens(example)
-        )
+        e_tokens = self._example_tokens[(self._family_for(example), example)]
         if not q_tokens or not e_tokens:
             return 0.0
-        return len(q_tokens & e_tokens) / len(q_tokens | e_tokens)
+        intersection, union = q_tokens & e_tokens, q_tokens | e_tokens
+        weight = lambda token: self._idf.get(token, 1.0)
+        return sum(weight(t) for t in intersection) / sum(weight(t) for t in union)
 
     def _family_for(self, example: str) -> IntentFamily:
         for family in self.catalog.families:

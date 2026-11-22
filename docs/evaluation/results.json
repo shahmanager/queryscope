@@ -1,11 +1,11 @@
 {
-  "threshold": 0.5,
+  "threshold": 0.48,
   "semantic": {
     "threshold": 0.86,
     "calibration": {
       "cases": 46,
-      "decision_accuracy": 0.8913,
-      "execution_accuracy": 0.8684,
+      "decision_accuracy": 0.8696,
+      "execution_accuracy": 0.8421,
       "intent_accuracy": 0.8837,
       "retrieval_recall_at_1": 0.9302,
       "retrieval_recall_at_3": 0.9535,
@@ -13,9 +13,9 @@
       "false_refusal_rate": 0.0,
       "coverage": 0.7609,
       "clarification_recall": 1.0,
-      "latency_p50_ms": 14.2,
-      "latency_p95_ms": 19.42,
-      "mean_estimated_scan_cost": 125.0
+      "latency_p50_ms": 37.58,
+      "latency_p95_ms": 64.69,
+      "mean_estimated_scan_cost": 123.9
     },
     "test": {
       "cases": 18,
@@ -28,8 +28,8 @@
       "false_refusal_rate": 0.0588,
       "coverage": 0.8333,
       "clarification_recall": 0.0,
-      "latency_p50_ms": 21.24,
-      "latency_p95_ms": 36.65,
+      "latency_p50_ms": 35.63,
+      "latency_p95_ms": 65.69,
       "mean_estimated_scan_cost": 140.0
     }
   },
@@ -38,35 +38,35 @@
   "test_cases": 18,
   "calibration": {
     "cases": 46,
-    "decision_accuracy": 0.9565,
-    "execution_accuracy": 0.9474,
-    "intent_accuracy": 0.8605,
-    "retrieval_recall_at_1": 0.907,
+    "decision_accuracy": 0.8913,
+    "execution_accuracy": 0.8947,
+    "intent_accuracy": 0.8372,
+    "retrieval_recall_at_1": 0.8837,
     "retrieval_recall_at_3": 0.9302,
-    "refusal_precision": 1.0,
-    "false_refusal_rate": 0.0,
-    "coverage": 0.8261,
-    "clarification_recall": 1.0,
-    "latency_p50_ms": 1.94,
-    "latency_p95_ms": 2.91,
-    "mean_estimated_scan_cost": 137.4
+    "refusal_precision": 0.7143,
+    "false_refusal_rate": 0.0263,
+    "coverage": 0.8043,
+    "clarification_recall": 0.6667,
+    "latency_p50_ms": 7.67,
+    "latency_p95_ms": 16.78,
+    "mean_estimated_scan_cost": 133.7
   },
   "test": {
     "cases": 18,
-    "decision_accuracy": 1.0,
-    "execution_accuracy": 1.0,
+    "decision_accuracy": 0.8889,
+    "execution_accuracy": 0.8824,
     "intent_accuracy": 0.7778,
     "retrieval_recall_at_1": 0.8333,
-    "retrieval_recall_at_3": 0.8333,
-    "refusal_precision": 1.0,
-    "false_refusal_rate": 0.0,
-    "coverage": 0.9444,
+    "retrieval_recall_at_3": 0.8889,
+    "refusal_precision": 0.3333,
+    "false_refusal_rate": 0.1176,
+    "coverage": 0.8333,
     "clarification_recall": 0.0,
-    "latency_p50_ms": 1.63,
-    "latency_p95_ms": 4.28,
-    "mean_estimated_scan_cost": 151.1
+    "latency_p50_ms": 5.66,
+    "latency_p95_ms": 12.2,
+    "mean_estimated_scan_cost": 140.0
   },
-  "tuning_score": 0.9565,
+  "tuning_score": 0.8913,
   "eval_now": "2026-06-30",
   "retriever": "lexical"
 }

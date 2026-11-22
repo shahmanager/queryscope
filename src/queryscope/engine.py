@@ -16,6 +16,7 @@ from .lexicon import Lexicon
 from .models import Answer, Diagnostic, IntentFamily
 from .planner import build_plan
 from .retrieval import LexicalRetriever, Retriever, SemanticRetriever
+from .schema_profile import SchemaProfile
 from .validation import validate
 
 DEFAULT_DB = Path(__file__).resolve().parents[2] / "data" / "northwind.sqlite"
@@ -43,9 +44,10 @@ class Engine:
         conn = sqlite3.connect(f"file:{self.db_path.as_posix()}?mode=ro", uri=True)
         try:
             self.catalog = SchemaCatalog.from_connection(conn)
+            self.profile = SchemaProfile.discover(self.catalog, conn)
         finally:
             conn.close()
-        self.lexicon = Lexicon(self.catalog)
+        self.lexicon = Lexicon(self.catalog, self.profile)
         self.intents = IntentCatalog()
         self.retriever: Retriever = (
             SemanticRetriever(self.intents) if semantic
@@ -104,7 +106,7 @@ class Engine:
         try:
             result = build_plan(
                 question, top.family, self.lexicon, self.catalog,
-                effective_now, alternatives=matches,
+                effective_now, alternatives=matches, profile=self.profile,
             )
         except (KeyError, ValueError) as exc:
             return finish(Answer(
@@ -124,7 +126,7 @@ class Engine:
                 diagnostics=result.diagnostics,
             ))
 
-        problems = validate(result.plan, self.catalog)
+        problems = validate(result.plan, self.catalog, self.profile)
         if problems:
             return finish(Answer(
                 question, "refused", confidence=top.score, family=top.family,
@@ -132,7 +134,7 @@ class Engine:
             ))
 
         try:
-            compiled = compile_plan(result.plan, self.catalog)
+            compiled = compile_plan(result.plan, self.catalog, self.profile)
             execution = execute(self.db_path, compiled)
         except (ValueError, sqlite3.Error) as exc:
             return finish(Answer(

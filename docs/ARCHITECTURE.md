@@ -24,7 +24,8 @@ flowchart LR
 | Layer | File | Responsibility | Never does |
 |---|---|---|---|
 | Catalog | `catalog.py` | Introspect tables, columns, types, PK/FK graph, row counts | Hardcode schema knowledge |
-| Lexicon | `lexicon.py` | Map business words to a closed canonical vocabulary | Emit SQL |
+| Schema profile | `schema_profile.py` | Derive fact tables, time column, label dimensions, categorical values, numeric measures and revenue expression from the catalog + data | Assume a table or column name |
+| Lexicon | `lexicon.py` | Map business words to canonical tokens using the discovered profile | Emit SQL or name a schema object |
 | Intents | `intents.py` | Define eight composable intent families with example phrasings | Bind to one question each |
 | Retrieval | `retrieval.py` | Rank families and normalize scores to `[0,1]` | Decide the final query |
 | Planner | `planner.py` | Compose metrics, dimensions, filters, time, rank into a `QueryPlan` | Write SQL text |
@@ -32,6 +33,22 @@ flowchart LR
 | Compiler | `compiler.py` | Render a validated plan to SQL with bound parameters | Accept raw user strings |
 | Executor | `executor.py` | Read-only, timeout-, row- and cost-limited execution | Mutate data |
 | Engine | `engine.py` | Orchestrate the pipeline and map failures to answer statuses | Hide failures |
+
+## Schema universality
+
+There are no table or column names in the planner, compiler, validator or lexicon.
+`SchemaProfile.discover(catalog, connection)` derives everything domain-specific:
+
+- **Fact tables** — ranked by `(outbound FK count + 1) × log(rows)`.
+- **Time column** — DATE affinity or date-like tokens, preferring a fact table.
+- **Label dimension** — a name-like, non-key TEXT column per table.
+- **Filter values** — observed distinct values of low-cardinality TEXT columns (≤ 40).
+- **Measures** — numeric non-key columns, plus a generic `revenue` expression built from
+  a discovered amount/charge/sales column, or from `quantity × price × (1 − discount)`.
+
+`tests/test_universal_schema.py` proves this with a hospital schema sharing no names with
+the demo warehouse; the engine answers counts, revenue, grouping and filtering queries
+against it without configuration.
 
 ## Safety invariants
 
@@ -67,9 +84,9 @@ Thresholds are per-scorer because the scales differ. The evaluation harness tune
 | New business vocabulary | `lexicon.py` synonym table |
 | New question shape | `intents.py` family + `planner.py` composer |
 | New derived measure | `compiler.py` `DERIVED_SQL` + `validation.py` |
-| New schema | regenerate with `scripts/build_db.py`; catalog and compiler adapt automatically |
+| New schema | point `Engine(db_path=...)` at any SQLite file; catalog and profile adapt automatically |
 | New scorer | implement the `Retriever` protocol |
 
 ## Known limits
 
-One fixed schema, eight intent families, no discourse context, no joins chosen by a cost optimizer, and a heuristic scan-cost estimate rather than real query plans. These are deliberate scope choices, documented in the README trade-off table.
+Eight intent families, no discourse context, no joins chosen by a cost optimizer, and a heuristic scan-cost estimate rather than real query plans. Schema discovery is generic, but accuracy on an unseen schema depends on column names matching common business concepts. These are deliberate scope choices, documented in the README trade-off table.

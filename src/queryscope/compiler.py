@@ -11,15 +11,7 @@ from typing import Any
 
 from .catalog import SchemaCatalog
 from .models import ColumnRef, DerivedSource, FilterOp, QueryPlan
-
-DERIVED_SQL = {
-    DerivedSource.LINE_REVENUE: (
-        '("order_items"."quantity" * "order_items"."unit_price" '
-        '* (1 - "order_items"."discount"))'
-    ),
-    DerivedSource.LINE_QUANTITY: '"order_items"."quantity"',
-}
-FACT_TABLES = ("order_items", "orders")
+from .schema_profile import SchemaProfile
 
 
 @dataclass(frozen=True)
@@ -47,22 +39,27 @@ def _grain_sql(grain: str, column_sql: str) -> str:
     )
 
 
-def source_sql(source: DerivedSource | ColumnRef | None) -> str:
+def source_sql(source: DerivedSource | ColumnRef | None, profile: SchemaProfile) -> str:
     if source is None:
         return "*"
     if isinstance(source, DerivedSource):
-        return DERIVED_SQL[source]
+        if source is DerivedSource.LINE_REVENUE:
+            return profile.revenue_expr
+        return profile.quantity_expr
     return colref_sql(source)
 
 
-def _involved_tables(plan: QueryPlan) -> list[str]:
+def _involved_tables(plan: QueryPlan, profile: SchemaProfile) -> list[str]:
     tables: list[str] = []
     for metric in plan.metrics:
         source = metric.source
         if isinstance(source, ColumnRef):
             tables.append(source.table)
         elif isinstance(source, DerivedSource):
-            tables.append("order_items")
+            tables.extend(
+                profile.revenue_tables if source is DerivedSource.LINE_REVENUE
+                else profile.quantity_tables
+            )
     tables.extend(d.table for d in plan.dimensions)
     tables.extend(f.column.table for f in plan.filters)
     if plan.time_range is not None:
@@ -70,8 +67,8 @@ def _involved_tables(plan: QueryPlan) -> list[str]:
     return list(dict.fromkeys(tables))
 
 
-def _join_order(tables: list[str], catalog: SchemaCatalog) -> list[str]:
-    base = next((t for t in FACT_TABLES if t in tables), tables[0] if tables else "")
+def _join_order(tables: list[str], catalog: SchemaCatalog, profile: SchemaProfile) -> list[str]:
+    base = next((t for t in profile.fact_tables if t in tables), tables[0] if tables else "")
     ordered = [base]
     for table in tables:
         if table == base:
@@ -83,12 +80,13 @@ def _join_order(tables: list[str], catalog: SchemaCatalog) -> list[str]:
     return ordered
 
 
-def compile_plan(plan: QueryPlan, catalog: SchemaCatalog) -> CompiledSQL:
-    tables = _involved_tables(plan)
+def compile_plan(plan: QueryPlan, catalog: SchemaCatalog, profile: SchemaProfile | None = None) -> CompiledSQL:
+    profile = profile or SchemaProfile.discover(catalog)
+    tables = _involved_tables(plan, profile)
     if not tables:
         if not plan.metrics:
             raise ValueError("Cannot compile an empty plan")
-        tables = ["orders"]  # COUNT(*) with no explicit entity: the fact table
+        tables = [profile.fact_tables[0] if profile.fact_tables else catalog.tables[0]]
 
     select: list[str] = []
     group_by: list[str] = []
@@ -104,14 +102,14 @@ def compile_plan(plan: QueryPlan, catalog: SchemaCatalog) -> CompiledSQL:
         group_by.append(expr)
 
     for metric in plan.metrics:
-        expr = source_sql(metric.source)
+        expr = source_sql(metric.source, profile)
         distinct = "DISTINCT " if metric.distinct else ""
         select.append(f"{metric.agg.value}({distinct}{expr}) AS {quote(metric.alias)}")
 
     if not select:
         raise ValueError("Cannot compile a plan with no selectable expressions")
 
-    ordered = _join_order(tables, catalog)
+    ordered = _join_order(tables, catalog, profile)
     joined = [ordered[0]]
     from_clause = f"FROM {quote(ordered[0])}"
     for table in ordered[1:]:
