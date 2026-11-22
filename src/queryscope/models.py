@@ -96,6 +96,7 @@ class QueryPlan:
     dimensions: tuple[ColumnRef, ...] = ()
     filters: tuple[Filter, ...] = ()
     time_range: TimeRange | None = None
+    time_grain: str | None = None  # month | quarter | year
     order_by: tuple[OrderTerm, ...] = ()
     limit: int | None = None
 

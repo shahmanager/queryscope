@@ -77,6 +77,10 @@ class SchemaCatalog:
     def tables(self) -> tuple[str, ...]:
         return tuple(self._columns)
 
+    @property
+    def foreign_keys(self) -> tuple[tuple[str, str, str, str], ...]:
+        return self._fks
+
     def column(self, key: str) -> ColumnInfo:
         table, _, name = key.partition(".")
         for col in self._columns.get(table, ()):
